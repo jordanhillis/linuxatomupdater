@@ -1,4 +1,4 @@
-# Linux Atom Updater
+![LAU Logo](https://jordanhillis.com/images/github/lau/logo.png)
 
 This project was created to allow the Atom Editor (Atom.io) on Linux to be updated automatically either on a scheduled basis or with a simple command.
 
@@ -7,6 +7,10 @@ This project was created to allow the Atom Editor (Atom.io) on Linux to be updat
 * Installs Atom Editor on your system
 * Updates Atom Editor to the newest version possible
 * Schedules updates on a daily, weekly or monthly basis for Atom Editor
+
+## Latests Version
+
+* v1.0
 
 ### Prerequisites
 
