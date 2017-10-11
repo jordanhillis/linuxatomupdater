@@ -2,13 +2,19 @@
 
 This project was created to allow the Atom Editor (Atom.io) on Linux to be updated automatically either on a scheduled basis or with a simple command.
 
+### Why Linux Atom Updater?
+
+Atom Editor is a text editor built for Windows, Mac, and Linux but lacks the ability to update to the latest stable version on Linux. There are PPA's available to have the latest Atom Editor version but with using those you are allowing yourself to possibly receive malicious packages. Additionally PPA's are sometimes maintained very poorly and contain older packages than what the latest stable release currently is from the official maintainer.
+With Linux Atom Editor we take security in mind and grab the latest version right from Atom Editor's GitHub repository to ensure the security of your system and that you are indeed receiving the latest stable build. 
+
 ## Features
 
 * Installs Atom Editor on your system
 * Updates Atom Editor to the newest version possible
+* Only receives updates from the official Atom Editor repository on GitHub
 * Schedules updates on a daily, weekly or monthly basis for Atom Editor
 
-## Latests Version
+### Latests Version
 
 * v1.0
 
