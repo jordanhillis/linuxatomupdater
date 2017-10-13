@@ -15,7 +15,7 @@ With Linux Atom Editor we take security in mind and grab the latest version righ
 * Schedules updates on a daily, weekly or monthly basis for Atom Editor
 * Supports both Debian and RedHat distributions
 
-## Latests Version
+## Latest Version
 
 * v1.1
 
