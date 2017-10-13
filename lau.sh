@@ -1,7 +1,7 @@
 #/bin/bash
 
 # Settings
-version="1.0"
+version="1.1"
 program_longname="Linux Atom Updater"
 program_shortname="atomupdater"
 
@@ -19,6 +19,29 @@ function version(){
   printf $version"\n"
   exit 1
 }
+
+# Use RPM or DEB?
+if [ -x "$(command -v dpkg)" ]; then
+    package_type="deb"
+fi
+if [ -x "$(command -v rpm)" ]; then
+    package_type="rpm"
+fi
+
+# Figure out which package manager to use
+package_manager=""
+declare -A osInfo;
+osInfo[/etc/redhat-release]=yum
+osInfo[/etc/arch-release]=pacman
+osInfo[/etc/gentoo-release]=emerge
+osInfo[/etc/SuSE-release]=zypp
+osInfo[/etc/debian_version]=apt-get
+for f in ${!osInfo[@]}
+do
+    if [[ -f $f ]];then
+        package_manager=${osInfo[$f]}
+    fi
+done
 
 function banner(){
 echo -e "$blue
@@ -57,7 +80,7 @@ function install_program(){
 function uninstall_program(){
   if [ -e /usr/local/sbin/$program_shortname ]; then
     printf "[*] Uninstalling "$blue"$program_longname"$transparent"...\n"
-    rm /usr/local/sbin/$program_shortname
+    rm -f /usr/local/sbin/$program_shortname
     printf "[*] Removed from system.\n\n"
     exit 1
   else
@@ -72,23 +95,42 @@ function check_requirements(){
        printf $red"[*]"$transparent" This program must be run as root.\n\n"
        exit 1
     fi
-    # Check if Debian based system
-    if [ ! -f /etc/debian_version ]; then
-      printf $red"[*]"$transparent" This program is for Debian based systems only.\n\n"
+    if [[ -z "$package_type" ]]; then
+      printf $red"[*]"$transparent" It appears you are not on a Debian or Red Hat based distro. We cannot continue.\n\n"
       exit 1
     fi
+    # Check if wget is installed
+    if ! [ -x "$(command -v wget)" ]; then
+      printf $red"[*]"$transparent" Error, wget does not appear to be installed.\n"
+      printf "    Please install wget with the command 'sudo $package_manager install wget'\n\n"
+      exit 1
+    else
+      if [ "$package_type" == "deb" ];then
+          wget_version_current=$(dpkg -s wget | grep '^Version:' | awk '{print $2}')
+      else
+          wget_version_current=$(rpm -qi wget | grep '^Version' | awk '{print $3}')
+      fi
+      if [ "$(printf "1.16\n$wget_version_current" | sort -V | head -n1)" == "$wget_version_current" ] && [ "$wget_version_current" != "1.16" ]; then
+          printf $red"[*]"$transparent" Error, wget version is currently $wget_version_current and it needs to be at least 1.16. Please update.\n\n"
+          exit 1
+      fi
+    fi
     # Check if Atom is installed
-    if [ $(dpkg-query -W -f='${Status}' atom 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
+    if ! [ -x "$(command -v atom)" ]; then
       printf $red"[*]"$transparent" Error, Atom does not appear to be installed.\n"
       read -r -p "[-] Would you like to install Atom? [y/N] " response
       case "$response" in
           [yY][eE][sS]|[yY])
               printf "[-] Downloading the latest Atom version...\n"
-              wget -O /tmp/atom.deb https://atom.io/download/deb -q --show-progress
+              wget -O /tmp/atom.$package_type https://atom.io/download/$package_type -q --show-progress
               printf "[*] Installing Atom...\n"
-              dpkg -i /tmp/atom.deb
+              if [ "$package_type" == "deb" ];then
+                  dpkg -i /tmp/atom.$package_type
+              else
+                  yum localinstall /tmp/atom.$package_type
+              fi
               printf "[*] Installation complete!\n"
-              rm /tmp/atom.deb
+              rm -f /tmp/atom.$package_type
               printf "\n    Enjoy!\n\n"
               ;;
           *)
@@ -97,48 +139,60 @@ function check_requirements(){
       esac
       exit 1
     fi
-    # Check if wget is installed
-    if [ $(dpkg-query -W -f='${Status}' wget 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-      printf $red"[*]"$transparent" Error, wget does not appear to be installed.\n"
-      printf "    Please install wget with the command 'sudo apt-get install wget'\n\n"
-      exit 1
-    fi
     # Check if cron is installed
-    if [ $(dpkg-query -W -f='${Status}' cron 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
+    if ! [ -x "$(command -v crontab)" ]; then
       printf $red"[*]"$transparent" Error, cron does not appear to be installed.\n"
-      printf "    Please install cron with the command 'sudo apt-get install cron'\n\n"
+      printf "    Please install cron with the command 'sudo $package_manager install cron'\n\n"
       exit 1
     fi
 }
 
 function update_atom(){
     # Grab latest version from GitHub
-    printf "[*] Checking for the latest version of Atom released...\n"
+    printf "[*] Checking for the latest version of Atom Editor released...\n"
     atom_version_latest=$(wget https://github.com/atom/atom/releases/latest -q -O - | grep -oE "<title>.*</title>" | sed 's/<title>//' | sed 's/<\/title>//' | awk '{printf $2}')
-    atom_version_current=$(dpkg -s atom | grep '^Version:' | awk '{print $2}')
+    if [ "$atom_version_latest" == "" ];then
+        printf "[*] Error receiving the latest Atom Editor version. Retrying in 3 seconds...\n"
+        update_atom
+        exit 1
+    fi
+    if [ "$package_type" == "deb" ];then
+        atom_version_current=$(dpkg -s atom | grep '^Version:' | awk '{print $2}')
+    else
+        atom_version_current=$(rpm -qi atom | grep '^Version' | awk '{print $3}')
+    fi
+    # Check current Atom version and compare it to the newest version downloaded
     if [ "$atom_version_current" == "$atom_version_latest" ]; then
         printf "[*] Atom appears to have the latest version installed! (v$atom_version_current)\n"
         printf "\n    Exiting...Goodbye!\n\n"
         exit 1
     fi
-    # Check current Atom version and compare it to the newest version downloaded
-    printf "[-] Downloading the latest Atom version...\n"
-    wget -O /tmp/atom.deb https://atom.io/download/deb -q --show-progress
+    printf "[-] Update found! (Latest: v$atom_version_latest) (Installed: v$atom_version_current)\n"
+    printf "[-] Downloading the latest Atom version (v$atom_version_latest)...\n"
+    wget -O /tmp/atom.$package_type https://atom.io/download/$package_type -q --show-progress
     printf "[-] Download complete.\n"
     printf "[-] Comparing installed version with downloaded version...\n"
-    atom_version_download=$(dpkg-deb -f /tmp/atom.deb Version)
+    if [ "$package_type" == "deb" ];then
+        atom_version_download=$(dpkg-deb -f /tmp/atom.deb Version)
+    else
+        atom_version_download=$(rpm -qip /tmp/atom.rpm | grep '^Version' | awk '{print $3}')
+    fi
     printf "[-] Installed version: "$blue"$atom_version_current"$transparent"\n"
     printf "[-] Downloaded version: "$blue"$atom_version_download"$transparent"\n"
     if [ "$atom_version_current" == "$atom_version_download" ]; then
       printf "[*] Atom appears to have the latest version installed!\n"
-      printf "[*] Removing downloaded \"atom.deb\" file..."
-      rm /tmp/atom.deb
+      printf "[*] Removing downloaded \"atom.$package_type\" file..."
+      rm -f /tmp/atom.$package_type
       printf "Done.\n"
       printf "\n    Exiting...Goodbye!\n\n"
       exit 1
     else
       printf "[*] Installing new version of Atom ($atom_version_download)...\n"
-      dpkg -i /tmp/atom.deb
+      if [ "$package_type" == "deb" ];then
+          dpkg -i /tmp/atom.$package_type
+      else
+          yum localinstall /tmp/atom.$package_type
+      fi
       printf "[*] Update complete!\n"
       printf "\n    Enjoy!\n\n"
     fi
