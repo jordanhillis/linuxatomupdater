@@ -152,7 +152,8 @@ function update_atom(){
     printf "[*] Checking for the latest version of Atom Editor released...\n"
     atom_version_latest=$(wget https://github.com/atom/atom/releases/latest -q -O - | grep -oE "<title>.*</title>" | sed 's/<title>//' | sed 's/<\/title>//' | awk '{printf $2}')
     if [ "$atom_version_latest" == "" ];then
-        printf "[*] Error receiving the latest Atom Editor version. Retrying in 3 seconds...\n"
+        printf "[*] Error receiving the latest Atom Editor version. Retrying in 5 seconds...\n"
+        sleep 5
         update_atom
         exit 1
     fi
