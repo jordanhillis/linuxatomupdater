@@ -13,24 +13,33 @@ With Linux Atom Editor we take security in mind and grab the latest version righ
 * Updates Atom Editor to the newest version possible
 * Only receives updates from the official Atom Editor repository on GitHub
 * Schedules updates on a daily, weekly or monthly basis for Atom Editor
+* Supports both Debian and RedHat distributions
 
-### Latests Version
+## Latests Version
 
-* v1.0
+* v1.1
 
-### Prerequisites
+## Prerequisites
 
-Before using this program you will need to be on a Debian based system and have the following packages installed.
+Before using this program you will need to have the following packages installed.
 * wget
 * cron
 
 To install all required packages enter the following command.
 
+##### Debian:
+
 ```
 sudo apt-get install cron wget
 ```
 
-### Installing
+##### RedHat:
+
+```
+sudo yum install cronie wget
+```
+
+## Installing
 
 To install Linux Atom Updater please enter the following commands
 
@@ -43,7 +52,7 @@ chmod +x lau.sh
 
 After you have ran those commands you can now use the command: "atomupdater" for future use of the program
 
-### Usage
+## Usage
 
 Example of usage:
 ```
